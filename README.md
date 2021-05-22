@@ -54,7 +54,7 @@ will need the following:
 Clone this repository.
 
 ~~~sh
-$ git clone https://github.com/awslabs/aws-dx-monitor
+$ git clone https://github.com/transurban/aws-dx-monitor
 ~~~
 
 ### 3. Create a staging S3 bucket
@@ -97,6 +97,13 @@ You may wish to alarm on these levels:
 | Connections on Interconnect | >= 5  |
 | Virtual Interface           | >= 5  |
 | Virtual Gateway             | >= 3  |
+
+### 6. Update Virtual Interface Alarms
+
+Inorder to update the alarms when a Virtual interface is added or removed please execute the following script:
+~~~sh
+$ update-virtual-interface-alarms.sh
+~~~
 
 # Status Levels
 

@@ -17,9 +17,9 @@
 # Author: Richard Elberger (elberger@amazon.com)
 
 import logging
+import botocore
 import boto3
 import json
-from enum import Enum
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -29,10 +29,9 @@ cwclient = boto3.client('cloudwatch')
 
 # The 'live' handler - from scheduler
 def lambda_handler ( event, context ):
-    ver_vistate   ( dxclient.describe_virtual_interfaces() )
-    ver_cstate    ( dxclient.describe_connections() )
-    ver_vpgstate  ( dxclient.describe_virtual_gateways() )
-    ver_dxgwstate ( dxclient.describe_direct_connect_gateways() )
+    ver_vistate  ( dxclient.describe_virtual_interfaces() )
+    ver_cstate   ( dxclient.describe_connections() )
+    ver_vpgstate ( dxclient.describe_virtual_gateways() )
     # Only DX Service Providers can make this call without an
     # exception
     #
@@ -45,7 +44,7 @@ def ver_vistate ( data ):
         return
     for iface in data['virtualInterfaces']:
         put_vistate( iface['virtualInterfaceId'],
-                     VirtualInterfaceState[iface['virtualInterfaceState']].value )
+                     VirtualInterfaceState[iface['virtualInterfaceState']])
 
 # connections payload evaluation
 def ver_cstate ( data ):
@@ -55,7 +54,7 @@ def ver_cstate ( data ):
     for conn in data['connections']:
         put_cstate( conn['connectionId'],
                     # Lookup int value in Connection enum
-                    ConnectionState[conn['connectionState']].value )
+                    ConnectionState[conn['connectionState']])
 
 # interconnect payload evaluation
 def ver_cistate ( data ):
@@ -65,7 +64,7 @@ def ver_cistate ( data ):
     for intconn in data['interconnects']:
         put_icstate( intconn['interconnectId'],
                      # Lookup int value in IntConn enum
-                     InterconnectState[intconn['interconnectState']].value )
+                     InterconnectState[intconn['interconnectState']])
 
 # virtualgateway payload evaluation
 def ver_vpgstate( data ):
@@ -75,17 +74,7 @@ def ver_vpgstate( data ):
     for vpg in data['virtualGateways']:
         put_vpgstate( vpg['virtualGatewayId'],
                       # Lookup int value in VGW enum
-                      VirtualGatewayState[vpg['virtualGatewayState']].value )
-
-# direct connect gateway payload evaluation
-def ver_dxgwstate( data ):
-    if not 'directConnectGateways' in data:
-        logger.error("unexpected: directConnectGateways key not found in data")
-        return
-    for dxgw in data['directConnectGateways']:
-        put_dxgwstate( dxgw['directConnectGatewayId'],
-                      # Lookup int value in DXGW enum
-                      DirectConnectGatewayState[dxgw['directConnectGatewayState']].value )
+                      VirtualGatewayState[vpg['virtualGatewayState']])
 
 # Writes VirtualInterfaceState dimension data to DX custom metric
 def put_vistate ( iid, state ):
@@ -163,63 +152,41 @@ def put_vpgstate ( iid, state ):
         ],
     )
 
-# Writes DXGW dimension data to DX custom metric
-def put_dxgwstate ( iid, state ):
-    response = cwclient.put_metric_data(
-        Namespace='AWSx/DirectConnect',
-        MetricData=[
-            {
-                'MetricName': 'DirectConnectGatewayState',
-                'Dimensions': [
-                    {
-                        'Name': 'DirectConnectGatewayId',
-                        'Value': iid
-                    },
-                ],
-                'Value': state,
-                'Unit': 'None'
-            },
-        ],
-    )
 
+VirtualInterfaceState = dict(
+    confirming = 1,
+    verifying  = 2,
+    pending    = 3,
+    available  = 4,
+    down       = 5,
+    deleting   = 6,
+    deleted    = 7,
+    rejected   = 8,
+)
 
-class VirtualInterfaceState(Enum):
-    confirming = 1
-    verifying  = 2
-    pending    = 3
-    available  = 4
-    down       = 5
-    deleting   = 6
-    deleted    = 7
-    rejected   = 8
-    testing    = 9
+ConnectionState = dict(
+    ordering   = 1,
+    requested  = 2,
+    pending    = 3,
+    available  = 4,
+    down       = 5,
+    deleting   = 6,
+    deleted    = 7,
+    rejected   = 8,
+)
 
-class ConnectionState(Enum):
-    ordering   = 1
-    requested  = 2
-    pending    = 3
-    available  = 4
-    down       = 5
-    deleting   = 6
-    deleted    = 7
-    rejected   = 8
+InterconnectState = dict(
+    requested  = 1,
+    pending    = 2,
+    available  = 3,
+    down       = 4,
+    deleting   = 5,
+    deleted    = 6,
+)
 
-class InterconnectState(Enum):
-    requested  = 1
-    pending    = 2
-    available  = 3
-    down       = 4
-    deleting   = 5
-    deleted    = 6
-
-class VirtualGatewayState(Enum):
-    pending    = 1
-    available  = 2
-    deleting   = 3
-    deleted    = 4
-
-class DirectConnectGatewayState(Enum):
-    pending    = 1
-    available  = 2
-    deleting   = 3
-    deleted    = 4
+VirtualGatewayState = dict(
+    pending    = 1,
+    available  = 2,
+    deleting   = 3,
+    deleted    = 4,
+)
